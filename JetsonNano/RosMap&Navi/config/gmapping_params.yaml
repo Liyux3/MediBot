@@ -1,0 +1,47 @@
+# GMapping Parameters (Tune these!)
+base_frame: "base_link" # Your robot's base frame
+odom_frame: "odom"     # Odometry frame (even if faked)
+map_frame: "map"      # World map frame
+
+# Map update rate (seconds) - Higher value uses less CPU
+map_update_interval: 5.0
+
+# Robot motion limits (affects particle prediction)
+linearUpdate: 0.05 # Update map if moved 0.2 meters
+angularUpdate: 0.1 # Update map if turned 0.3 radians (~17 deg)
+temporalUpdate: -1.0 # Don't update based on time alone
+
+# Sensor processing
+maxUrange: 11.5 # Max usable range (slightly less than lidar max)
+maxRange: 12.0  # Absolute max range of sensor
+sigma: 0.05     # Std deviation for scan matching
+kernelSize: 1
+lstep: 0.05
+astep: 0.05
+iterations: 5
+lsigma: 0.075
+ogain: 3.0
+lskip: 0
+
+# Particle filter (Performance critical!)
+particles: 50 # Start low for Nano (e.g., 20-50), increase if localization is poor
+
+# Map resolution (meters/pixel) - Smaller = more detail, more memory/CPU
+delta: 0.05 # 5cm resolution is common
+
+# Likelihood field (scan matching accuracy)
+llsamplerange: 0.01
+llsamplestep: 0.01
+lasamplerange: 0.005
+lasamplestep: 0.005
+
+# Other settings (Defaults usually okay)
+srr: 0.1
+srt: 0.2
+str: 0.1
+stt: 0.2
+resampleThreshold: 0.5
+xmin: -10.0 # Initial map size guess (meters)
+ymin: -10.0
+xmax: 10.0
+ymax: 10.0

@@ -1,0 +1,20 @@
+<launch>
+  <!-- Include the lidar launch file (starts lidar node and TF publisher) -->
+  <include file="$(find trolberg_amr)/launch/lidar.launch"/>
+
+  <!-- Run GMapping node -->
+  <node name="slam_gmapping" pkg="gmapping" type="slam_gmapping" output="screen">
+    <!-- Load parameters -->
+    <rosparam command="load" file="$(find trolberg_amr)/config/gmapping_params.yaml"/>
+
+    <!-- Remap topics if needed (defaults usually fine) -->
+    <remap from="scan" to="/scan"/>
+  </node>
+
+  <!-- Optional: Run RViz for visualization -->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find trolberg_amr)/config/mapping_rviz.rviz" required="false"/>
+
+    <!-- Add transform from odom to base_link -->  
+  <node name="real_odom_publisher" pkg="trolberg_amr" type="real_odom_publisher.py" output="screen"/>
+  
+</launch>

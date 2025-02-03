@@ -1,0 +1,25 @@
+global_costmap:
+  global_frame: map      # Uses the main map frame
+  robot_base_frame: base_link # Robot's center frame
+  update_frequency: 1.0  # How often to update this costmap (Hz) - Lower is less CPU
+  publish_frequency: 0.5 # How often to publish for RViz (Hz)
+  static_map: true       # IMPORTANT: Use the map loaded by map_server
+  transform_tolerance: 1.0 # Allow 1 sec delay for TF
+
+  static_layer:
+    enabled: true
+    map_topic: "/map" # Explicitly state map topic
+
+  obstacle_layer:
+    enabled: true
+    obstacle_range: 3.0
+    raytrace_range: 3.5
+    observation_sources: laser_scan_sensor
+    laser_scan_sensor: {sensor_frame: laser_frame, data_type: LaserScan, topic: /scan, marking: true, clearing: true}
+    # track_unknown_space: true # If you want this
+
+  inflation_layer:
+    enabled: true
+    cost_scaling_factor: 5.0
+    inflation_radius: 0.30
+    

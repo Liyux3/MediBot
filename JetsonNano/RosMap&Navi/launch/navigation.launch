@@ -1,0 +1,46 @@
+<launch>
+    <!-- Arguments -->
+    <arg name="map_file" default="$(find trolberg_amr)/maps/hospital_lab_map.yaml"/> <!-- Point to your saved map -->
+    <arg name="open_rviz" default="true"/>
+
+    <!-- Run the map server -->
+    <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)"/>
+
+    <!-- Run AMCL -->
+    <node name="amcl" pkg="amcl" type="amcl" output="screen">
+    <rosparam command="load" file="$(find trolberg_amr)/config/amcl_params.yaml"/>
+    <remap from="scan" to="/scan"/>
+    <!-- AMCL needs the /odom topic published by your real_odom_publisher -->
+    </node>
+
+    <!-- Run move_base -->
+    <node name="move_base" pkg="move_base" type="move_base" respawn="false" output="screen">
+    <!-- Load common costmap parameters -->
+    <rosparam command="load" file="$(find trolberg_amr)/config/costmap_common_params.yaml" ns="global_costmap"/>
+    <rosparam command="load" file="$(find trolberg_amr)/config/costmap_common_params.yaml" ns="local_costmap"/>
+    <!-- Load specific costmap parameters -->
+    <rosparam command="load" file="$(find trolberg_amr)/config/local_costmap_params.yaml" ns="local_costmap"/>
+    <rosparam command="load" file="$(find trolberg_amr)/config/global_costmap_params.yaml" ns="global_costmap"/>
+    <!-- Load planner parameters -->
+    <rosparam command="load" file="$(find trolberg_amr)/config/dwa_local_planner_params.yaml" ns="DWAPlannerROS"/> <!-- Load DWA params into its namespace -->
+
+    <!-- Specify the planners -->
+    <param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS"/>
+    <param name="base_global_planner" value="navfn/NavfnROS"/> <!-- Default global planner -->
+
+    <!-- Remap topics -->
+    <remap from="cmd_vel" to="/cmd_vel"/> <!-- Output velocity commands -->
+    <remap from="odom" to="/odom"/>     <!-- Input odometry -->
+    </node>
+
+    <!-- Run Lidar Node -->
+    <include file="$(find trolberg_amr)/launch/lidar.launch"/>
+
+    <!-- Run Real Odometry Publisher -->
+    <node name="real_odom_publisher" pkg="trolberg_amr" type="real_odom_publisher.py" output="screen"/>
+
+    <!-- Optional: Run RViz -->
+    <group if="$(arg open_rviz)">
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find trolberg_amr)/config/navigation_rviz.rviz" required="true"/>
+    </group>
+</launch>

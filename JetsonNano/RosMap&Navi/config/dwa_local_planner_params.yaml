@@ -1,0 +1,48 @@
+# DWA Local Planner Parameters (Tune velocity/acceleration limits for YOUR robot!)
+DWAPlannerROS:
+  # Robot Configuration Parameters
+  acc_lim_x: 1.0      # Max fwd/bwd acceleration (m/s^2) - BE REALISTIC
+  acc_lim_y: 1.0      # Max strafe acceleration (m/s^2) - BE REALISTIC
+  acc_lim_th: 2.5     # Max angular acceleration (rad/s^2) - BE REALISTIC
+  # acc_lim_trans: # Not directly used by DWA, uses x/y limits
+
+  max_vel_x: 0.4      # Max fwd/bwd speed (m/s) - START SLOW
+  min_vel_x: -0.2     # Min fwd/bwd speed (m/s) - Allow reversing if needed, else 0.0
+
+  max_vel_y: 0.3      # Max strafe speed (m/s) - START SLOW
+  min_vel_y: -0.3     # Min strafe speed (m/s)
+
+  max_trans_vel: 0.5  # Max magnitude of combined X/Y velocity (m/s)
+  min_trans_vel: 0.1  # Min magnitude velocity before stopping (m/s)
+
+  max_rot_vel: 0.8    # Max angular velocity (rad/s) - START SLOW
+  min_rot_vel: 0.2    # Min angular velocity magnitude before stopping (rad/s)
+
+  # Goal Tolerance Parameters
+  yaw_goal_tolerance: 0.15 # Allowed angle error at goal (rad) ~9 deg
+  xy_goal_tolerance: 0.15  # Allowed position error at goal (m) 15cm
+  # latch_xy_goal_tolerance: false # Use if robot sometimes stops just short
+
+  # Forward Simulation Parameters
+  sim_time: 1.5       # How far ahead to simulate trajectories (seconds)
+  sim_granularity: 0.025 # Step size for simulation points (meters)
+  angular_sim_granularity: 0.02 # Step size for simulated angles (radians)
+  vx_samples: 8       # How many linear X speeds to sample (More = more CPU)
+  vy_samples: 8       # How many linear Y speeds to sample (More = more CPU)
+  vth_samples: 20     # How many angular speeds to sample (More = more CPU)
+
+  # Trajectory Scoring Parameters (How to choose the best path)
+  path_distance_bias: 32.0    # Weight for staying close to the global path (Higher = less deviation)
+  goal_distance_bias: 24.0    # Weight for getting closer to the local goal (Higher = more direct)
+  occdist_scale: 0.02         # Weight for avoiding obstacles (Higher = more cautious, maybe too timid)
+  # forward_point_distance: 0.325 # Not used by DWA
+  # stop_time_buffer: 0.2       # Time buffer before hitting obstacle
+  # scaling_speed: 0.25         # Speed below which safety scaling occurs
+  # max_scaling_factor: 0.2     # Max safety scaling factor
+
+  # Oscillation Prevention Parameters
+  oscillation_reset_dist: 0.05
+  # oscillation_reset_angle: 0.2 # Less critical for omni drive
+
+  # Other Parameters
+  # prune_plan: true # If using NavFn global planner

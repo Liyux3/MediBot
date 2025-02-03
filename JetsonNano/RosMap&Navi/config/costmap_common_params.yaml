@@ -1,0 +1,28 @@
+# Footprint or Radius (Define robot shape for collision checking)
+# Option 1: Circular Robot (Simpler)
+robot_radius: 0.15 # meters (Radius slightly larger than widest part: sqrt(LX^2 + LY^2) ?) - CHECK THIS!
+
+# Option 2: Rectangular Footprint (More accurate if not circular)
+# footprint: [[LX, LY], [-LX, LY], [-LX, -LY], [LX, -LY]] # Replace LX, LY with meters
+# Example: footprint: [[0.1025, 0.0825], [-0.1025, 0.0825], [-0.1025, -0.0825], [0.1025, -0.0825]]
+
+# Obstacle Layer (Reads sensor data)
+obstacle_layer:
+  enabled: true
+  obstacle_range: 3.0 # Check obstacles up to 3m away
+  raytrace_range: 3.5 # Clear free space up to 3.5m away
+  observation_sources: laser_scan_sensor
+  laser_scan_sensor: {
+    sensor_frame: laser_frame, # Must match TF frame of lidar
+    data_type: LaserScan,
+    topic: /scan,             # Lidar topic
+    marking: true,            # Use sensor to add obstacles
+    clearing: true            # Use sensor to remove obstacles
+  }
+  # track_unknown_space: true # Set true if you want unknown space treated as obstacles
+
+# Inflation Layer (Buffer around obstacles)
+inflation_layer:
+  enabled: true
+  cost_scaling_factor: 5.0  # Lower = less penalty further away. 2.5-5 is typical.
+  inflation_radius: 0.30   # meters. MUST be > robot_radius (or footprint size). How much space robot needs.

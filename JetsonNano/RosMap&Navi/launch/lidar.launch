@@ -1,0 +1,37 @@
+
+<launch>
+  <node name="ydlidar_node" pkg="ydlidar_ros_driver" type="ydlidar_ros_driver_node" output="screen" respawn="false">
+    <!-- string property -->
+    <param name="port"         type="string" value="/dev/ttyUSB1"/> <!-- Or /dev/ttyUSB0 etc. -->
+    <param name="frame_id"     type="string" value="laser_frame"/>
+
+
+    <!-- int property -->
+    <param name="baudrate"         type="int" value="115200"/>
+    <param name="lidar_type"       type="int" value="1"/> <!-- 1 = Triangle -->
+    <param name="device_type"      type="int" value="0"/> <!-- 0 = Serial -->
+    <param name="sample_rate"      type="int" value="4"/> <!-- Changed -->
+
+    <!-- bool property -->
+
+    <param name="isSingleChannel"    type="bool"   value="true"/>
+
+
+    <!-- float property -->
+    <param name="angle_min"    type="double" value="-180.0" />
+    <param name="angle_max"    type="double" value="180.0" />
+    <param name="range_min"    type="double" value="0.08" /> <!-- Changed -->
+    <param name="range_max"    type="double" value="16.0" />
+  </node>
+
+  <!-- Static TF: Where is the lidar relative to the robot center? -->
+  <!-- Adjust x, y, z, yaw based on your mounting -->
+  <!-- Example: Lidar 10cm forward from center, facing forward -->
+  <!-- Note: X2.launch used base_footprint, we're using base_link -->
+  <node pkg="tf2_ros" type="static_transform_publisher" name="base_to_laser_broadcaster"
+        args="0.1 0 0 0 0 0 base_link laser_frame" />
+  
+  
+
+
+</launch>

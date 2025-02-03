@@ -1,0 +1,44 @@
+# AMCL Parameters (Tune for Nano & Mecanum)
+odom_model_type: "omni-corrected" # Use omni model for Mecanum, 'corrected' applies corrections
+odom_frame_id: "odom"
+base_frame_id: "base_link"
+global_frame_id: "map"
+
+# Particle Filter settings (CRITICAL for performance/accuracy)
+min_particles: 100     # Start low for Nano
+max_particles: 1500    # Max guesses allowed (balance CPU vs. recovery)
+kld_err: 0.05          # Error tolerance
+kld_z: 0.99          # Probability for KLD sampling
+update_min_d: 0.1      # Update filter if moved 0.1m
+update_min_a: 0.15     # Update filter if turned ~9 degrees (radians)
+resample_interval: 1   # Resample particles every 1 filter update (more frequent = faster recovery, more CPU)
+
+# Transform tolerance (how long to wait for TF data)
+transform_tolerance: 0.5 # seconds (Increase if getting TF timeout errors)
+
+# Initial Pose (Set manually in RViz usually)
+# initial_pose_x: 0.0
+# initial_pose_y: 0.0
+# initial_pose_a: 0.0
+# initial_cov_xx: 0.25 # Increase if initial guess is uncertain
+# initial_cov_yy: 0.25
+# initial_cov_aa: 0.0685
+
+# Laser Model (How to use lidar scans)
+laser_model_type: "likelihood_field" # Generally good performance
+laser_z_hit: 0.85        # Probability of a true hit
+laser_z_short: 0.05      # Probability of hitting something closer
+laser_z_max: 0.05        # Probability of reading max range incorrectly
+laser_z_rand: 0.05       # Probability of random reading
+laser_sigma_hit: 0.2     # Std deviation of hit accuracy (meters)
+laser_lambda_short: 0.1
+laser_likelihood_max_dist: 2.5 # Max distance to check map for matching scan point (meters)
+laser_max_beams: 60      # IMPORTANT: Subsample scan points to save CPU (e.g., 60-100)
+
+# Odometry Model (How much to trust the Arduino's odometry)
+# For omni-corrected model: alpha1-4 relate noise to motion components
+odom_alpha1: 0.15  # Uncertainty: rotation from rotation
+odom_alpha2: 0.15  # Uncertainty: rotation from translation/strafe
+odom_alpha3: 0.15  # Uncertainty: translation/strafe from translation/strafe
+odom_alpha4: 0.15  # Uncertainty: translation/strafe from rotation
+# odom_alpha5: 0.1 # Not used by omni-corrected
