@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ELEC 3848 Group E6 AMR Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script> <!-- Chart.js-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/5.10.4/mqtt.min.js" integrity="sha512-U6juml/sd5ivQOO5Nmd3IB8DUgRYRJ3whk/+oxaOJHyA9WtXXl3p42YoevQ7/PnuZR1Oir607H3A/+AjQ/gWug==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> <!-- mqtt.js-->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚗</text></svg>">
+    <!-- Add simple icons (optional, using text symbols here) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        /* static/style.css embedded */
+
+        /* Basic Reset and Body Styling */
+        *, *::before, *::after { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; margin: 0; padding: 0; background-color: #f0f2f5; color: #333; line-height: 1.6; display: flex; flex-direction: column; min-height: 100vh; }
+        header { background-color: #4a6fa5; color: #fff; padding: 1rem 1.5rem; text-align: center; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+        h1 { margin: 0; font-size: 1.8rem; }
+        h2 { margin-top: 0; margin-bottom: 1rem; color: #1d3557; border-bottom: 2px solid #a8dadc; padding-bottom: 0.5rem; font-size: 1.4rem; }
+
+        /* Main Content Layout */
+        .container { display: flex; flex-wrap: wrap; gap: 1.5rem; padding: 1.5rem; flex-grow: 1; width: 100%; max-width: 1200px; margin: 0 auto; }
+
+        /* Panel Styling */
+        .panel { background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.5rem; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05); transition: box-shadow 0.3s ease; }
+        .panel:hover { box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08); }
+
+        /* Layout specifics */
+        .chart-panel { flex: 2 1 500px; display: flex; flex-direction: column; }
+        .right-column { flex: 1 1 300px; display: flex; flex-direction: column; gap: 1.5rem; }
+
+        /* Chart container */
+        .chart-container { position: relative; flex-grow: 1; min-height: 300px; }
+        #sensorChart { max-width: 100%; max-height: 50%; }
+
+        /* Readings Panel & Battery */
+        .readings-wrapper { display: flex; gap: 1rem; align-items: flex-start; }
+        .reading-panel-content { flex-grow: 1; }
+        .sensor-reading { font-size: 1.1rem; margin: 0.8rem 0; display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.5rem; border-bottom: 1px dashed #eee; }
+        .sensor-reading:last-child { border-bottom: none; }
+        .sensor-reading .label { color: #555; margin-right: 0.5rem; }
+        .sensor-reading .value { font-weight: bold; color: #007bff; font-size: 1.2rem; }
+        #battery.value { color: #28a745; }
+
+        /* Battery Icon Styles */
+        .battery-icon-container { padding-top: 0.5rem; display: flex; flex-direction: column; align-items: center; }
+        .battery-outline { width: 35px; height: 70px; border: 2px solid #555; border-radius: 5px; position: relative; background-color: #f0f0f0; overflow: hidden; margin-bottom: 5px; }
+        .battery-nub { width: 10px; height: 4px; background-color: #555; margin: 0 auto; border-radius: 0 0 2px 2px; }
+        .battery-level { position: absolute; bottom: 0; left: 0; right: 0; width: 100%; height: 50%; background-color: #28a745; transition: height 0.5s ease-out, background-color 0.5s ease; display: flex; align-items: center; justify-content: center; }
+        .battery-level.low { background-color: #ffc107; }
+        .battery-level.critical { background-color: #dc3545; }
+        .battery-text { color: #fff; font-size: 11px; font-weight: bold; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-shadow: 1px 1px 1px rgba(0,0,0,0.4); }
+        .battery-level.low + .battery-text { color: #333; text-shadow: none; }
+
+        /* Gas Panel Specific Styling */
+        .gas-panel { transition: background-color 0.5s ease, border-left 0.5s ease; }
+        .gas-panel.normal { background-color: #e9f7ef; border-left: 6px solid #4CAF50; }
+        .gas-panel.normal #gas_status { color: #4CAF50; }
+        .gas-panel.alert { background-color: #fdecea; border-left: 6px solid #f44336; }
+        .gas-panel.alert #gas_status { color: #f44336; font-weight: bold; animation: pulse 1.5s infinite; }
+        .gas-info { font-size: 0.85rem; color: #666; margin-top: 1rem; text-align: center; }
+        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.05); opacity: 0.8; } 100% { transform: scale(1); opacity: 1; } }
+
+        /* --- MODIFIED: Music Player Panel Styling --- */
+        .music-player-panel {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #song-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 1rem 0; /* Space below list */
+            max-height: 100px; /* Limit height */
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 4px;
+        }
+
+        #song-list li {
+            padding: 0.4rem 0.8rem;
+            border-bottom: 1px solid #f5f5f5;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #song-list li:last-child { border-bottom: none; }
+        #song-list li:hover { background-color: #e9ecef; }
+        #song-list li.selected { background-color: #a8dadc; font-weight: bold; color: #1d3557; }
+
+        .player-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem; /* Space between controls */
+            margin-bottom: 0.8rem; /* Space below controls */
+            flex-wrap: wrap; /* Allow wrapping on small screens */
+        }
+
+        .player-controls button {
+            background-color: #4a6fa5;
+            color: white;
+            border: none;
+            padding: 0.5rem 0.8rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s ease;
+        }
+        .player-controls button:hover { background-color: #1d3557; }
+        .player-controls button:disabled { background-color: #ccc; cursor: not-allowed; }
+        .player-controls button i { margin-right: 0.3em; } /* Space for icon */
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-grow: 1; /* Allow volume to take space */
+        }
+        .volume-control label { font-size: 0.9rem; color: #555; }
+        .volume-control input[type="range"] {
+            flex-grow: 1;
+            cursor: pointer;
+            height: 6px;
+            accent-color: #4a6fa5; /* Modern way to style slider color */
+        }
+        #volume-level { font-size: 0.9rem; font-weight: bold; color: #1d3557; min-width: 25px; text-align: right; }
+
+        #current-track-info {
+            font-size: 0.9rem;
+            color: #333;
+            margin-bottom: 0.8rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px dashed #eee;
+            min-height: 1.5em; /* Prevent layout shift */
+            text-align: center;
+        }
+        #current-track-info .status { font-weight: bold; margin-left: 0.5em; }
+        #current-track-info .status.playing { color: #28a745; }
+        #current-track-info .status.paused { color: #ffc107; }
+
+
+        /* Music Log Styling (Kept for playback events) */
+        .music-log-display h3 {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            color: #555;
+        }
+        #music-log-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 80px; /* Smaller height for the log now */
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        #music-log-list li {
+            padding: 0.3rem 0.6rem;
+            border-bottom: 1px solid #eee;
+            color: #333;
+        }
+        #music-log-list li:last-child { border-bottom: none; }
+        #music-log-list li .timestamp { font-size: 0.9em; color: #777; margin-right: 0.5em; }
+
+        /* --- End Music Player Styling --- */
+
+
+        /* Mask Log Panel Styling */
+        .mask-log-panel .log-entry { padding: 0.5rem 0; border-bottom: 1px dotted #eee; font-size: 0.95rem; }
+        .mask-log-panel .log-entry:last-child { border-bottom: none; }
+        .mask-log-panel .timestamp { font-size: 0.8em; color: #777; margin-right: 0.5em; display: inline-block; min-width: 70px; }
+        .mask-log-panel .status-detected { color: #28a745; font-weight: bold; }
+        .mask-log-panel .status-not-detected { color: #dc3545; font-weight: bold; }
+        .mask-log-panel #mask-log-content { max-height: 150px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; padding: 0.5rem 0.8rem; }
+
+        /* Footer Styling */
+        footer { text-align: center; padding: 1rem; margin-top: 1.5rem; background-color: #e9ecef; color: #6c757d; font-size: 0.9rem; border-top: 1px solid #dee2e6; }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            .container { flex-direction: column; padding: 1rem; }
+            .chart-panel, .right-column { flex-basis: auto; width: 100%; }
+            h1 { font-size: 1.5rem; }
+            h2 { font-size: 1.2rem; }
+            .sensor-reading { font-size: 1rem; }
+            .sensor-reading .value { font-size: 1.1rem; }
+            .mask-log-panel #mask-log-content { max-height: 120px; }
+
+            /* Responsive Battery */
+            .readings-wrapper { flex-direction: column; align-items: center; gap: 0.5rem; }
+            .reading-panel-content { width: 100%; }
+            .battery-icon-container { padding-top: 0.5rem; margin-bottom: 1rem; }
+            .battery-outline { height: 60px; width: 30px; }
+            .battery-nub { width: 10px; height: 4px; border-radius: 0 0 2px 2px;}
+            .battery-text { font-size: 10px; }
+
+            /* Responsive Music Player */
+            #song-list { max-height: 80px; }
+            .player-controls { gap: 0.5rem; } /* Reduce gap */
+            .player-controls button { padding: 0.4rem 0.6rem; font-size: 0.9rem; }
+            .volume-control { margin-top: 0.5rem; } /* May stack below button */
+            .music-log-display h3 { font-size: 0.9rem; }
+            #music-log-list { max-height: 60px; font-size: 0.8rem;}
+        }
+  .page_switch {
+    display: flex;
+    flex-direction: row; 
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  .page_switch a {
+    text-decoration: none;
+    font-weight: 600;
+    color: #4a6fa5;
+    background-color: #f0f2f5;
+    padding: 0.6rem 1rem;
+    border-radius: 4px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  
+  .page_switch a:hover {
+    background-color: #d4ff00;
+    color: #fff;
+  }
+
+    </style>
+</head>
+<body>
+    <header>
+        <h1>AMR Monitor</h1>
+        <div class = "page_switch">
+            <a href="rti_display.html">Real-time Camera</a>
+            <a href="control.html">Movement control</a>
+            <a href="heat.html">Thermal Camera</a>
+        </div>
+    </header>
+
+    <main class="container">
+        
+        <section class="panel chart-panel">
+            <!-- ... Chart Section ...  -->
+            <h2>Temperature & Humidity History</h2>
+            <div class="chart-container">
+                 <canvas id="sensorChart"></canvas>
+            </div>
+        </section>
+
+        <aside class="right-column">
+            <!-- Readings & Battery Section -->
+            <div class="readings-wrapper panel">
+                 <section class="reading-panel-content">
+                    <h2>Current Readings</h2>
+                    <p class="sensor-reading"> <span class="label">Temperature:</span> <span id="temp" class="value">N/A</span> °C </p>
+                    <p class="sensor-reading"> <span class="label">Humidity:</span> <span id="humidity" class="value">N/A</span> % </p>
+                    <p class="sensor-reading"> <span class="label">Battery:</span> <span id="battery" class="value">N/A</span> % </p>
+                    <p class="sensor-reading"> <span class="label">Power:</span> <span id="power" class="value">N/A</span> W </p> 
+                </section>
+                <div class="battery-icon-container">
+                     <div class="battery-nub"></div>
+                     <div class="battery-outline">
+                        <div class="battery-level" id="battery-level-indicator"></div>
+                        <span class="battery-text" id="battery-level-text">--%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gas Detector Section -->
+            <section class="panel gas-panel normal" id="gas-panel">
+                <!-- ... Gas Detector Content -->
+                 <h2>Gas Detector (MQ-135)</h2>
+                 <p class="sensor-reading"> <span class="label">Reading:</span> <span id="mq135" class="value">N/A</span> </p>
+                 <p class="sensor-reading"> <span class="label">Status:</span> <span id="gas_status" class="value">Normal</span> </p>
+                 <div class="gas-info"> (Relative indication. Threshold: <span id="gas-threshold">N/A</span>) </div>
+            </section>
+
+            <!-- MODIFIED: Music Player Panel -->
+            <section class="panel music-player-panel">
+                <h2>Music Player</h2>
+
+                <!-- Song List -->
+                <ul id="song-list">
+                    <!-- Songs will be populated by JavaScript -->
+                     <li>Loading songs...</li>
+                </ul>
+
+                <!-- Currently Playing Info -->
+                <div id="current-track-info">
+                    <span>No track selected</span>
+                    <span class="status" id="player-status"></span>
+                </div>
+
+                 <!-- Player Controls -->
+                <div class="player-controls">
+                    <button id="play-pause-button" disabled>
+                        <i class="fas fa-play"></i> Play
+                    </button>
+                    <!-- <div class="volume-control">
+                        <label for="volume-slider"><i class="fas fa-volume-down"></i></label>
+                        <input type="range" id="volume-slider" min="0" max="100" value="80">
+                        <span id="volume-level">80%</span>
+                    </div> -->
+                </div>
+
+                <!-- Log Display Area -->
+                <div class="music-log-display">
+                    <h3>Playback Log</h3>
+                    <ul id="music-log-list">
+                        <li><span class="timestamp">--:--:--</span> Player Initialized...</li>
+                    </ul>
+                </div>
+
+
+                <audio id="audio-player"></audio>
+
+            </section>
+
+            <!-- Mask Log Panel -->
+            <section class="panel mask-log-panel">
+                <!-- ... Mask Log Content ... -->
+                <h2>Mask Wearing Log</h2>
+                <div id="mask-log-content"> <div class="log-entry"><span class="timestamp">--:--:--</span> Log Initialized...</div> </div>
+            </section>
+
+        </aside>
+    </main>
+
+    <footer>
+        <p>ELEC 3848 E6 </p>
+    </footer>
+    
+    <script>
+        // ---  Configurable Constants ---
+        const GAS_THRESHOLD = 1000; 
+        const MAX_CHART_POINTS = 10;
+        const MAX_LOG_ENTRIES = 10;
+        const BATTERY_LOW_THRESHOLD = 40;
+        const BATTERY_CRITICAL_THRESHOLD = 20;
+        const MIN_DISPLAY_TEMP = 15;
+        const MAX_DISPLAY_TEMP = 30;
+        const MIN_DISPLAY_HUM = 50;
+        const MAX_DISPLAY_HUM = 70;
+
+
+        function EstMQTT(){
+        console.log("Connecting to the broker")
+        //const url = 'wss://your-mqtt-broker.example.com:8084/mqtt'
+        const url = 'ws://broker.emqx.io:8083/mqtt'
+        //const url = 'ws://test.mosquitto.org:8083/mqtt'
+
+        /***
+         * Node.js
+         * This document explains how to use MQTT over TCP with both mqtt and mqtts protocols.
+         * EMQX's default port for mqtt connections is 1883, while for mqtts it is 8883.
+         */
+        //const url = 'mqtt://test.mosquitto.org:1883'
+
+        // Create an MQTT client instance
+        const options = {
+        // Clean session
+        clean: true,
+        connectTimeout: 4000,
+        // Authentication
+        clientId: 'emqx_test',
+        username: 'Fred-O',
+        password: '',
+        }
+        const client  = mqtt.connect(url, options)
+        client.on('connect', function () {
+        console.log('Connected')
+        // Subscribe to a topic
+        client.subscribe('Fred_ELEC3848/SayHello', function (err) {
+            if (!err) {
+            // Publish a message to a topic
+            return client
+            }
+        })
+        })
+        return client;
+        }
+
+        
+        // --- Music Data ---
+        // --- Changes allowed in this block ---
+        const musicTracks = [
+            { id: 'track1', title: "Greensleeves", src: "audio/Greensleeves.mp3" },
+            { id: 'track2', title: "Clair De Lune", src: "audio/clairdelune.mp3" },
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Element References ---
+            const tempElement = document.getElementById('temp');
+            const humidityElement = document.getElementById('humidity');
+            const batteryTextValueElement = document.getElementById('battery');
+            const powerTextValueElement = document.getElementById('power');
+            const mq135Element = document.getElementById('mq135');
+            const gasStatusElement = document.getElementById('gas_status');
+            const gasPanelElement = document.getElementById('gas-panel');
+            const gasThresholdDisplay = document.getElementById('gas-threshold');
+            const chartCanvas = document.getElementById('sensorChart');
+            const maskLogContent = document.getElementById('mask-log-content');
+            // Battery Icon
+            const batteryLevelIndicator = document.getElementById('battery-level-indicator');
+            const batteryLevelText = document.getElementById('battery-level-text');
+            // Music Player
+            const songListElement = document.getElementById('song-list');
+            const playPauseButton = document.getElementById('play-pause-button');
+            const volumeSlider = document.getElementById('volume-slider');
+            const volumeLevelElement = document.getElementById('volume-level');
+            const currentTrackInfoElement = document.getElementById('current-track-info');
+            const playerStatusElement = document.getElementById('player-status');
+            const musicLogList = document.getElementById('music-log-list'); // Log for player events
+            const audioPlayer = document.getElementById('audio-player');
+
+            // Display gas threshold
+            if (gasThresholdDisplay) gasThresholdDisplay.textContent = GAS_THRESHOLD;
+
+            // --- Global State Variables ---
+            let sensorChart = null;
+            let simulatedHistory = { timestamps: [], temps: [], humidities: [] };
+            let currentSimulatedBattery = 95;
+            let currentTrack = null; // { id, title, src }
+            let isPlaying = false;
+            let currentVolume = 80; // Default volume
+
+            // --- Chart.js Setup ---
+            const chartConfig = { /* ... Chart config remains the same ... */ 
+                type: 'line', 
+                data: { labels: [], datasets: [ { label: 'Temperature (°C)', data: [], borderColor: 'rgb(255, 99, 132)', backgroundColor: 'rgba(255, 99, 132, 0.1)', tension: 0.2, yAxisID: 'yTemp', fill: true, pointRadius: 1, pointHoverRadius: 4, }, { label: 'Humidity (%)', data: [], borderColor: 'rgb(54, 162, 235)', backgroundColor: 'rgba(54, 162, 235, 0.1)', tension: 0.2, yAxisID: 'yHumidity', fill: true, pointRadius: 1, pointHoverRadius: 4, } ] }, 
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    animation: { duration: 200 }, 
+                    scales: { 
+                        x: { title: { display: true, text: 'Time' }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } }, 
+                        yTemp: { type: 'linear', position: 'left', title: { display: true, text: 'Temperature (°C)', color: 'rgb(255, 99, 132)' }, suggestedMin: MIN_DISPLAY_TEMP, suggestedMax: MAX_DISPLAY_TEMP, grid: { drawOnChartArea: true }, ticks: { color: 'rgb(255, 99, 132)' } }, 
+                        yHumidity: { type: 'linear', position: 'right', title: { display: true, text: 'Humidity (%)', color: 'rgb(54, 162, 235)' }, suggestedMin: MIN_DISPLAY_HUM, suggestedMax: MAX_DISPLAY_HUM, grid: { drawOnChartArea: false, }, ticks: { color: 'rgb(54, 162, 235)' } } 
+                    }, 
+                    plugins: { legend: { position: 'top', }, tooltip: { mode: 'index', intersect: false, } }, 
+                    interaction: { mode: 'nearest', axis: 'x', intersect: false } } 
+                };
+
+            const ctx = chartCanvas.getContext('2d')
+            sensorChart = new Chart(ctx, chartConfig);
+
+            // --- Display Update Functions for Battery ---
+            function updateBatteryIcon(batteryPercent) {
+                if (!batteryLevelIndicator || !batteryLevelText) return;
+                const percent = Math.max(0, Math.min(100, Number(batteryPercent) || 0));
+                batteryLevelIndicator.style.height = `${percent}%`;
+                batteryLevelText.textContent = `${Math.round(percent)}%`;
+                batteryLevelIndicator.classList.remove('low', 'critical');
+                if (percent < BATTERY_CRITICAL_THRESHOLD) { batteryLevelIndicator.classList.add('critical'); }
+                else if (percent < BATTERY_LOW_THRESHOLD) { batteryLevelIndicator.classList.add('low'); }
+            }
+
+            let E_Count = 0;
+
+            function E_Logic(temp, gas)
+            {
+                console.log(temp, gas)
+                console.log(E_Count)
+                if (gas > GAS_THRESHOLD)
+                {
+                    console.log("!!");
+                    E_Count += 1;
+                } else
+                {
+                    if (E_Count >=0) E_Count -= 1;
+                }
+                if(E_Count > 2)
+                {
+                    window.location.href="abnormal.html";
+                }
+                
+            }
+
+
+            // --- Display Update Funtion ---
+            function updateDisplay(newTemp, newHum, newBattery, newGasReading, newPowerReading) {
+                if (newTemp != -999) if (tempElement) tempElement.textContent = newTemp ?? 'N/A';
+                if (newHum != -999) if (humidityElement) humidityElement.textContent = newHum?? 'N/A';
+                if (newBattery != -999) if (batteryTextValueElement) batteryTextValueElement.textContent = newBattery ?? 'N/A';
+                if (newGasReading != -999) if (mq135Element) mq135Element.textContent = newGasReading ?? 'N/A';
+                if (newBattery != -999) updateBatteryIcon(newBattery);
+                if (newPowerReading != -999) if (powerTextValueElement) powerTextValueElement.textContent = newPowerReading ?? 'N/A';
+                if (newGasReading == -999) return ;
+                E_Logic(newTemp, newGasReading)
+                 let gas_status;
+                 if (newGasReading >= GAS_THRESHOLD) gas_status = 'alert'; else gas_status = 'normal';
+                 if (gasStatusElement) gasStatusElement.textContent = gas_status === 'alert' ? 'ALERT' : 'Normal';
+                 if (gasPanelElement) {
+                     gasPanelElement.classList.toggle('alert', gas_status === 'alert');
+                     gasPanelElement.classList.toggle('normal', gas_status !== 'alert');
+                 }
+            }
+            function addLogEntry(listElement, message, maxEntries) {
+                 if (!listElement) return;
+                 const timestamp = new Date().toLocaleTimeString();
+                 const newEntry = document.createElement('li');
+                 // Basic sanitization (optional but good practice if message source is less trusted)
+                 const safeMessage = message.replace(/</g, "<").replace(/>/g, ">");
+                 newEntry.innerHTML = `<span class="timestamp">${timestamp}</span> ${safeMessage}`;
+                 listElement.insertBefore(newEntry, listElement.firstChild);
+                 while (listElement.children.length > maxEntries) {
+                     listElement.removeChild(listElement.lastChild);
+                 }
+            }
+             function addMaskLogEntry(status) {
+                 if (!maskLogContent) return;
+                 const timestamp = new Date().toLocaleTimeString();
+                 const newEntry = document.createElement('div');
+                 newEntry.classList.add('log-entry');
+                 
+                 // Convert the boolean status to a displayable string.
+                 const detectedText = (status === true) ? "Detected" : "Not Detected";
+                 const statusClass = (status === true) ? "status-detected" : "status-not-detected";
+                 
+                 newEntry.innerHTML = `<span class="timestamp">${timestamp}</span> <span class="${statusClass}">${detectedText}</span>`;
+                 maskLogContent.insertBefore(newEntry, maskLogContent.firstChild);
+                 
+                 // Ensure we keep only the latest MAX_LOG_ENTRIES entries.
+                 while (maskLogContent.children.length > MAX_LOG_ENTRIES) {
+                     maskLogContent.removeChild(maskLogContent.lastChild);
+                 }
+            }
+            function addMusicLogEntry(message) {
+                addLogEntry(musicLogList, message, MAX_LOG_ENTRIES);
+            }
+
+            // --- Music Player Functions ---
+            function populateSongList() {
+                if (!songListElement) return;
+                songListElement.innerHTML = ''; // Clear loading message
+                musicTracks.forEach(track => {
+                    const li = document.createElement('li');
+                    li.textContent = track.title;
+                    li.dataset.trackId = track.id; // Store track ID
+                    li.addEventListener('click', () => selectTrack(track));
+                    songListElement.appendChild(li);
+                });
+            }
+
+            function selectTrack(track) {
+                if (!track) return;
+                currentTrack = track;
+                isPlaying = false; // reset playing state before selection
+                audioPlayer.src = track.src; // set the track source
+                audioPlayer.load();
+                updatePlayerUI();
+                // Highlight selected track
+                document.querySelectorAll('#song-list li').forEach(li => {
+                    li.classList.toggle('selected', li.dataset.trackId === track.id);
+                });
+                addMusicLogEntry(`Selected: ${track.title}`);
+                playPauseButton.disabled = false;
+
+                
+            }
+
+            function togglePlayPause() {
+                if (!currentTrack) return; // No track selected
+                isPlaying = !isPlaying;
+                updatePlayerUI();
+                if (isPlaying) {
+                    addMusicLogEntry(`Playing: ${currentTrack.title}`);
+                    audioPlayer.play();
+                    console.log(currentTrack.title)
+                    client.publish('Fred_ELEC3848/SayHello', '{\"Type\":\"Play_Music\", \"Name\":\"'+currentTrack.title+'.mp3\", \"Enable\":true}')
+                    
+                } else {
+                    addMusicLogEntry(`Paused: ${currentTrack.title}`);
+                    client.publish('Fred_ELEC3848/SayHello', '{\"Type\":\"Play_Music\", \"Name\":\"'+currentTrack.title+'.mp3\", \"Enable\":false}')
+                    audioPlayer.pause();
+                }
+            }
+
+            function updateVolume(volumeValue) {
+                currentVolume = parseInt(volumeValue);
+                if (volumeLevelElement) volumeLevelElement.textContent = `${currentVolume}%`;
+            }
+
+            function updatePlayerUI() {
+                if (!currentTrackInfoElement || !playPauseButton || !playerStatusElement) return;
+
+                if (currentTrack) {
+                    currentTrackInfoElement.querySelector('span:first-child').textContent = `Track: ${currentTrack.title}`;
+                    playerStatusElement.textContent = isPlaying ? 'Playing' : 'Paused';
+                    playerStatusElement.className = isPlaying ? 'status playing' : 'status paused';
+                    playPauseButton.innerHTML = isPlaying ? '<i class="fas fa-pause"></i> Pause' : '<i class="fas fa-play"></i> Play';
+                    playPauseButton.disabled = false;
+                } else {
+                     currentTrackInfoElement.querySelector('span:first-child').textContent = 'No track selected';
+                     playerStatusElement.textContent = '';
+                     playPauseButton.innerHTML = '<i class="fas fa-play"></i> Play';
+                     playPauseButton.disabled = true;
+                }
+                 // Ensure volume slider reflects state
+                 if (volumeSlider) volumeSlider.value = currentVolume;
+                 if (volumeLevelElement) volumeLevelElement.textContent = `${currentVolume}%`;
+            }
+
+             // --- Event Listeners ---
+             if (playPauseButton) {playPauseButton.addEventListener('click', togglePlayPause)}
+             if (volumeSlider) {
+                 volumeSlider.addEventListener('input', (e) => updateVolume(e.target.value));
+                 // Update on change as well for accessibility/keyboard
+                 volumeSlider.addEventListener('change', (e) => updateVolume(e.target.value));
+                 
+             }
+
+            function updateChart(newTemp, newHum){
+                if (sensorChart) {
+                    const now = new Date().toLocaleTimeString();
+                    sensorChart.data.labels.push(now);
+                    sensorChart.data.datasets[0].data.push(newTemp);
+                    sensorChart.data.datasets[1].data.push(newHum);
+                if (sensorChart.data.labels.length > MAX_CHART_POINTS) {
+                        sensorChart.data.labels.shift();
+                        sensorChart.data.datasets.forEach((ds) => { ds.data.shift(); });
+                }
+                sensorChart.update('none');
+                }
+            }
+
+            // --- Initialization ---
+
+            /*
+            Data JSON format
+            {
+                "Type": "Sensor_Data",
+                "Temperature":value,
+                "Humidity":value,
+                "Battery":value,
+                "Gas":value,
+                "Mask":Boolean,
+            }
+        */
+        // Reference: https://www.emqx.cominit_data/en/blog/mqtt-js-tutorial#installation
+        client = EstMQTT();
+        client.publish('Fred_ELEC3848/SayHello', '{"Type":"Play_Music", "Name":"Evoice.mp3", "Enable":false}')
+        client.publish('Fred_ELEC3848/Web_Switch', '{"Type":"Web_Change", "Page":"index_html"}')
+        client.publish('Fred_ELEC3848/ELEC3848', '{"Type":"State_Change", "State":"Normal"}')
+        client.on('message', function (topic, message) {
+                let msg;
+                try {
+                    msg = JSON.parse(message.toString())
+                } catch (error)
+                {
+                    console.error("JSON parse error:", error);
+                    msg = message.toString(); // fallback to raw string
+                }
+                console.log("Incoming message from topic", topic.toString())
+                console.log("Message: ", msg)
+                if (msg.Type == "Sensor_Data")
+                {
+                    // Updata display
+            
+                    let newTemp = (msg.Temperature != null) ? msg.Temperature : -999
+                    let newHum = (msg.Humidity != null) ? msg.Humidity : -999
+                    let newBattery = (msg.Battery != null) ? msg.Battery : -999
+                    let newGasReading = (msg.Gas != null) ? msg.Gas : -999
+                    let newPowerReading = (msg.Power != null) ? msg.Power : -999
+                    let newMask = (msg.Mask != null) ? msg.Mask : -999
+                    console.log(newTemp, newHum, newBattery, newGasReading, newPowerReading, newMask)
+
+                    if (newTemp != -999 && newHum != -999) updateChart(newTemp, newHum)
+                    updateDisplay(newTemp, newHum, newBattery, newGasReading, newPowerReading)
+                    addMaskLogEntry(newMask)
+                }
+
+                if (msg.Type == "End_Connection")
+                {
+                    console.log("Connection with MQTT server is ended")
+                    client.end()
+                }
+                })
+
+            let init_data = {"Temp":0, "Humidity":0, "Battery":0, "Gas":0};
+            if (sensorChart) {
+            const now = new Date().toLocaleTimeString();
+            sensorChart.data.labels.push(now);
+            sensorChart.data.datasets[0].data.push(init_data.Temp);
+            sensorChart.data.datasets[1].data.push(init_data.Humidity);
+            if (sensorChart.data.labels.length > MAX_CHART_POINTS) {
+                sensorChart.data.labels.shift();
+                sensorChart.data.datasets.forEach((ds) => { ds.data.shift(); });
+            }
+            sensorChart.update('none');
+            }
+            updateDisplay(init_data.Temp, init_data.Humidity, init_data.Battery, init_data.Gas);
+            // Clear initial log messages & Populate Music
+            if (musicLogList) musicLogList.innerHTML = ''; // Clear default log
+            if (maskLogContent) maskLogContent.innerHTML = ''; // Clear default log
+            populateSongList(); // Add songs to the list
+            updatePlayerUI(); // Set initial player state (disabled button, etc.)
+            addMusicLogEntry("Player Initialized."); // Add initial log entry
+            console.log("Starting website");
+        });
+    </script>
+
+</body>
+</html>

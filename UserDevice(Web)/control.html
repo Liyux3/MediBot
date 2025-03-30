@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>ELEC 3848 E6 Real-time Control</title>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/5.10.4/mqtt.min.js" integrity="sha512-U6juml/sd5ivQOO5Nmd3IB8DUgRYRJ3whk/+oxaOJHyA9WtXXl3p42YoevQ7/PnuZR1Oir607H3A/+AjQ/gWug==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        <style>
+            *, *::before, *::after { box-sizing: border-box; }
+            body { 
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; 
+                margin: 0; 
+                padding: 0; 
+                background-color: #f0f2f5; 
+                color: #333; 
+                line-height: 1.6; 
+                display: flex; 
+                flex-direction: column; 
+                min-height: 100vh; 
+            }
+            header { 
+                background-color: #4a6fa5; 
+                color: #fff; 
+                padding: 1rem 1.5rem; 
+                text-align: center; 
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
+            }
+            h1 { 
+                margin: 0; 
+                font-size: 1.8rem; 
+            }
+            h2 { 
+                margin-top: 0; 
+                margin-bottom: 1rem; 
+                color: #1d3557; 
+                border-bottom: 2px solid #a8dadc; 
+                padding-bottom: 0.5rem; 
+                font-size: 1.4rem; 
+            }
+            /* Center the content in the container */
+            .container { 
+                display: flex; 
+                justify-content: center; 
+                align-items: center; 
+                padding: 1.5rem; 
+                flex-grow: 1; 
+                width: 100%; 
+                max-width: 1200px; 
+                margin: 0 auto; 
+            }
+            footer { 
+                text-align: center; 
+                padding: 1rem; 
+                margin-top: 1.5rem; 
+                background-color: #e9ecef; 
+                color: #6c757d; 
+                font-size: 0.9rem; 
+                border-top: 1px solid #dee2e6; 
+            }
+            .page_switch {
+                display: flex;
+                flex-direction: row; 
+                justify-content: center;
+                gap: 0.5rem;
+            }
+            .page_switch a {
+                text-decoration: none;
+                font-weight: 600;
+                color: #4a6fa5;
+                background-color: #f0f2f5;
+                padding: 0.6rem 1rem;
+                border-radius: 4px;
+                transition: background-color 0.3s ease, color 0.3s ease;
+            }
+            .page_switch a:hover {
+                background-color: #d4ff00;
+                color: #fff;
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <h1>AMR Control</h1>
+            <div class="page_switch">
+                <a href="index.html">Monitor</a>
+                <a href="rti_display.html">Real-time Camera</a>
+                <a href="heat.html">Thermal Camera</a>
+            </div>
+        </header>
+        <main class="container">
+            <!-- Buttons in case user prefers clicking -->
+            <button type="button" id="W_But" onclick="W()">W</button> 
+            <button type="button" id="S_But" onclick="S()">S</button> 
+            <button type="button" id="A_But" onclick="A()">A</button> 
+            <button type="button" id="D_But" onclick="D()">D</button> 
+        </main>
+        <footer>ELEC 3848 E6</footer>
+
+        <script>
+            let topic = "Fred_ELEC3848/Control";
+            let client = null;
+            let client2 = null;
+            // Idle timer will trigger after idleTimeoutDuration (ms),
+            // then the idle message "0 1" will be published repeatedly every idlePublishPeriod (ms)
+            const idleTimeoutDuration = 500; 
+            const idlePublishPeriod = 500;  
+            let idleTimer = undefined;
+            let idleInterval = undefined;
+
+            function publishIdle(){
+                client.publish(topic, "0 1");
+                console.log("Idle published: 0 1");
+            }
+
+            // Start the periodic idle publishing
+            function startIdleInterval(){
+                idleInterval = setInterval(() => {
+                    publishIdle();
+                }, idlePublishPeriod);
+            }
+
+            // Reset the idle functionality:
+            // Clear any existing idle timer/interval
+            // And set a new timer to start idle publishing after idleTimeoutDuration if no input occurs
+            function resetIdleTimer(){
+                if(idleTimer) clearTimeout(idleTimer);
+                if(idleInterval) {
+                    clearInterval(idleInterval);
+                    idleInterval = undefined;
+                }
+                idleTimer = setTimeout(() => {
+                    startIdleInterval();
+                }, idleTimeoutDuration);
+            }
+
+            function EstMQTT(){
+                console.log("Connecting to the broker");
+                const url = 'wss://your-mqtt-broker.example.com:8084/mqtt';
+                const options = {
+                    clean: true,
+                    connectTimeout: 4000,
+                    clientId: 'emqx_test',
+                    username: 'Fred-O',
+                    password: '',
+                };
+
+                const c = mqtt.connect(url, options);
+                c.on('connect', function () {
+                    console.log('Connected');
+                    c.subscribe(topic, function (err) {
+                        if (err) {
+                            console.error("Subscribe error:", err);
+                        }
+                    });
+                });
+                return c;
+            }
+            function EstMQTT2(){
+                console.log("Connecting to the broker");
+                const url = 'ws://broker.emqx.io:8083/mqtt';
+                const options = {
+                    clean: true,
+                    connectTimeout: 4000,
+                    clientId: 'emqx_test',
+                    username: 'Fred-O',
+                    password: '',
+                };
+
+                const c = mqtt.connect(url, options);
+                c.on('connect', function () {
+                    console.log('Connected');
+                    c.subscribe(topic, function (err) {
+                        if (err) {
+                            console.error("Subscribe error:", err);
+                        }
+                    });
+                });
+                return c;
+            }
+
+            client = EstMQTT();
+            client2 = EstMQTT2();
+            client.publish('Fred_ELEC3848/Web_Switch', '{"Type":"Web_Change", "Page":"control_html"}')
+            client2.publish('Fred_ELEC3848/Web_Switch', '{"Type":"Web_Change", "Page":"control_html"}')
+
+
+            // Publish a command and reset the idle timer/interval so publishing idle stops momentarily
+            function publishCommand(cmd){
+                client.publish(topic, cmd);
+                console.log("Published: " + cmd);
+                resetIdleTimer();
+            }
+
+            function W(){
+                publishCommand("W 1");
+            }
+
+            function S(){
+                publishCommand("S 1");
+            }
+
+            function A(){
+                publishCommand("A 1");
+            }
+
+            function D(){
+                publishCommand("D 1");
+            }
+
+            // Listen for keyboard input and publish corresponding commands
+            document.addEventListener('keydown', function(event) {
+                const key = event.key.toUpperCase();
+                if (['W','A','S','D','E','Q','X'].includes(key)) {
+                    publishCommand(key + ":0.1");
+                }
+            });
+
+            // Start the idle timer when the page loads
+            resetIdleTimer();
+        </script>
+    </body>
+</html>
