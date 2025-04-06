@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang = "en">
+    <head>
+        <title>ELEC 3848 E6 Real-time image display</title>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/5.10.4/mqtt.min.js" integrity="sha512-U6juml/sd5ivQOO5Nmd3IB8DUgRYRJ3whk/+oxaOJHyA9WtXXl3p42YoevQ7/PnuZR1Oir607H3A/+AjQ/gWug==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> <!-- mqtt.js-->
+        <style>
+            *, *::before, *::after { box-sizing: border-box; }
+            body { 
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; 
+                margin: 0; 
+                padding: 0; 
+                background-color: #f0f2f5; 
+                color: #333; 
+                line-height: 1.6; 
+                display: flex; 
+                flex-direction: column; 
+                min-height: 100vh; 
+            }
+            header { 
+                background-color: #4a6fa5; 
+                color: #fff; 
+                padding: 1rem 1.5rem; 
+                text-align: center; 
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
+            }
+            h1 { 
+                margin: 0; 
+                font-size: 1.8rem; 
+            }
+            h2 { 
+                margin-top: 0; 
+                margin-bottom: 1rem; 
+                color: #1d3557; 
+                border-bottom: 2px solid #a8dadc; 
+                padding-bottom: 0.5rem; 
+                font-size: 1.4rem; 
+            }
+            /* Center the content in the container */
+            .container { 
+                display: flex; 
+                justify-content: center; 
+                align-items: center; 
+                padding: 1.5rem; 
+                flex-grow: 1; 
+                width: 100%; 
+                max-width: 1200px; 
+                margin: 0 auto; 
+            }
+            footer { 
+                text-align: center; 
+                padding: 1rem; 
+                margin-top: 1.5rem; 
+                background-color: #e9ecef; 
+                color: #6c757d; 
+                font-size: 0.9rem; 
+                border-top: 1px solid #dee2e6; 
+            }
+            .page_switch {
+    display: flex;
+    flex-direction: row; 
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  .page_switch a {
+    text-decoration: none;
+    font-weight: 600;
+    color: #4a6fa5;
+    background-color: #f0f2f5;
+    padding: 0.6rem 1rem;
+    border-radius: 4px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  
+  .page_switch a:hover {
+    background-color: #d4ff00;
+    color: #fff;
+  }
+        </style>
+    </head>
+    <body>
+        <header>
+            <h1> AMR Real-time Cam</h1>
+            <div class = "page_switch">
+                <a href="index.html">Monitor</a>
+                <a href="control.html">Movement control</a>
+                <a href="heat.html">Thermal Camera</a>
+            </div>
+        </header>
+        <main class = "container">
+            <img id = "image_place" src = "fake_image/fake.jpeg" alt = "This img should display here">
+        </main>
+        <footer> ELEC 3848 E6</footer>
+
+        <script>
+            const imageElement = document.getElementById("image_place")
+            function EstMQTT()
+            {
+                console.log("Connecting to the broker")
+                const url = 'wss://your-mqtt-broker.example.com:8084/mqtt'
+                const options = 
+                {
+                // Clean session
+                clean: true,
+                connectTimeout: 4000,
+                // Authentication
+                clientId: 'emqx_test',
+                username: 'Fred-O',
+                password: '',
+                }
+
+                const client  = mqtt.connect(url, options)
+                client.on('connect', function () {
+                console.log('Connected')
+                // Subscribe to a topic
+                client.subscribe('Fred_ELEC3848/Picture', function (err) {
+                    if (!err) {
+                    return client
+                    }
+                })
+                })
+                return client;
+                }
+                function EstMQTT2()
+            {
+                console.log("Connecting to the broker")
+                const url = 'ws://broker.emqx.io:8083/mqtt'
+                const options = 
+                {
+                // Clean session
+                clean: true,
+                connectTimeout: 4000,
+                // Authentication
+                clientId: 'emqx_test',
+                username: 'Fred-O',
+                password: '',
+                }
+
+                const client  = mqtt.connect(url, options)
+                client.on('connect', function () {
+                console.log('Connected')
+                // Subscribe to a topic
+                client.subscribe('Fred_ELEC3848/Picture', function (err) {
+                    if (!err) {
+                    return client
+                    }
+                })
+                })
+                return client;
+                }
+
+                client = EstMQTT();
+                client2 = EstMQTT2();
+                client.publish('Fred_ELEC3848/Web_Switch', '{"Type":"Web_Change", "Page":"rti_display.html"}')
+                client2.publish('Fred_ELEC3848/Web_Switch', '{"Type":"Web_Change", "Page":"rti_display.html"}')
+                client.on('message', function (topic, message) {
+                let msg = message;
+                try {
+                    //msg = JSON.parse(message.toString())
+                } catch (error)
+                {
+                    console.error("JSON parse error:", error);
+                    msg = message.toString(); // fallback to raw string
+                }
+                console.log("Incoming message from topic", topic.toString())
+                //console.log("Message: ", msg)
+                try{
+                    msg = msg.toString()
+                    console.log("Message: ", msg)
+                    imageElement.src = "data:image/jpeg;base64,"+ msg
+                    console.log("Image changed")
+                } catch (error)
+                {
+                    console.log("Image error: ", error)
+                }
+                
+
+                // if (msg.Type == "End_Connection")
+                // {
+                //     console.log("Connection with MQTT server is ended")
+                //     client.end()
+                // }
+                })
+
+
+        </script>
+    </body>
+
+</html>
