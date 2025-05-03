@@ -8,6 +8,10 @@ Upon detecting smoke or fire, it will transition to emergency mode, play audio a
 
 https://github.com/user-attachments/assets/9a6b4d10-532c-44e1-a109-206e84b807f9
 
+<p align="center">
+  <img src="demo.gif" alt="MediBot dashboard demo" width="90%">
+</p>
+
 ## System Overview
 
 **Compute** Jetson Nano (vision, LIDAR, MQTT orchestration) + Arduino (motor control, encoder odometry) + ESP32 (WiFi sensor publishing)
